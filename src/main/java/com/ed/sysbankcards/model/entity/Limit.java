@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
+@Table(name = "limit_card")
 @NoArgsConstructor
 @Setter
 @Getter
@@ -20,7 +21,10 @@ public class Limit extends BaseEntity {
     @SequenceGenerator(name = "sequence_limit", sequenceName = "limit_main_sequence", allocationSize = 1)
     private Long id;
 
+    @Column(name = "daily_limit")
     private BigDecimal dailyLimit;
+
+    @Column(name = "monthly_limit")
     private BigDecimal monthlyLimit;
 
     @OneToOne

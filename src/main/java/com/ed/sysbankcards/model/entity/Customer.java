@@ -9,7 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@Table(name = "")
 @Entity
 @NoArgsConstructor
 @Setter
@@ -35,8 +34,8 @@ public class Customer extends BaseEntity{
     private List<Card> cards;
 
     @ManyToMany
-    @JoinTable(name = "User_Role",
-            joinColumns = @JoinColumn(name = "user_id"),
+    @JoinTable(name = "customer_role",
+            joinColumns = @JoinColumn(name = "customer_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles = new HashSet<>();

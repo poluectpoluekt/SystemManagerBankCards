@@ -5,15 +5,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: rest
+    container_name: Card
     ports:
       - '8181:8080'
     environment:
       - DB_URL=jdbc:postgresql://localhost:5432/Card
       - DB_USERNAME=card-postgres
       - DB_PASSWORD=card-postgres
+      - REDIS_HOST=localhost:6379
     depends_on:
       - db_pg_15
+      - redis
 
   db_pg_15:
     image: postgres:15-alpine
@@ -24,3 +26,12 @@ services:
       POSTGRES_DB: Card
       POSTGRES_USER: card-postgres
       POSTGRES_PASSWORD: card-postgres
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: redis
+    hostname: redis-master
+    ports:
+      - '6379:6379'
+    deploy:
+      replicas: 1

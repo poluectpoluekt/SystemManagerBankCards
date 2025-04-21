@@ -25,8 +25,13 @@ public class LimitService {
                 .orElseThrow(()-> new CardWithNumberNoExistsException(limitDto.getCardNumber()));
 
         Limit limit = card.getLimit() != null ? card.getLimit() : new Limit();
+        System.out.println(limit);
         limit.setDailyLimit(limitDto.getDailyLimit());
         limit.setMonthlyLimit(limitDto.getMonthlyLimit());
+        limit.setCard(card);
         limitRepository.save(limit);
+
+        card.setLimit(limit);
+        cardRepository.save(card);
     }
 }

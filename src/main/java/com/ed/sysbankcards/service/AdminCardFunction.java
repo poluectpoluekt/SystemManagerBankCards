@@ -15,6 +15,7 @@ import com.ed.sysbankcards.repository.LimitRepository;
 import com.ed.sysbankcards.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,9 +34,11 @@ public class AdminCardFunction {
     private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
     private final LimitService limitService;
+    private final IdempotencyService idempotencyService;
+    private final long TIME_LIFE_RECORD_DB = 3600;
 
     @Transactional
-    public CardResponse createCard(CreateCardRequest createCardDto) {
+    public CardResponse createCard(CreateCardRequest createCardDto, String idempotencyKey) {
 
         Card card = new Card();
         if(cardRepository.findByCardNumber(createCardDto.getCardNumber()).isPresent()) {
@@ -51,41 +54,55 @@ public class AdminCardFunction {
         card.setBalance(BigDecimal.ZERO);
         card.setCurrency("RUB");
 
-        return cardMapper.toCardResponse(cardRepository.save(card));
+        CardResponse response = cardMapper.toCardResponse(cardRepository.save(card));
+        idempotencyService.saveIdempotencyKey(idempotencyKey, response, TIME_LIFE_RECORD_DB);
+
+        return response;
     }
 
     public CardResponse updateCard(UpdateCardRequest updateDto) {
         Card card = cardRepository.findByCardNumber(updateDto.getCardNumber())
                 .orElseThrow(()-> new CardWithNumberNoExistsException(updateDto.getCardNumber()));
 
-//        card.setCardNumber(passwordEncoder.encode(updateDto.getNewCardNumber()));
-        card.setExpiryDate(LocalDate.parse(updateDto.getNewExpiryDate()));
+        card.setCardNumber(updateDto.getNewCardNumber());
+        card.setExpiryDate(updateDto.getNewExpiryDate());
 
         return cardMapper.toCardResponse(cardRepository.save(card));
     }
 
     @Transactional
-    public void blockCard(BlockCardRequest blockCardDto) {
+    public String blockCard(BlockCardRequest blockCardDto, String idempotencyKey) {
         Card card = cardRepository.findByCardNumber(blockCardDto.getCardNumber())
                 .orElseThrow(()-> new CardWithNumberNoExistsException(blockCardDto.getCardNumber()));
         card.setStatus(CardStatus.BLOCKED);
         cardRepository.save(card);
+
+        String response = "Card blocked";
+        idempotencyService.saveIdempotencyKey(idempotencyKey, response, TIME_LIFE_RECORD_DB);
+        return response;
     }
 
     @Transactional
-    public void activateCard(ActivateCardRequest activateCardDto) {
+    public String activateCard(ActivateCardRequest activateCardDto, String idempotencyKey) {
         Card card = cardRepository.findByCardNumber(activateCardDto.getCardNumber())
                 .orElseThrow(()-> new CardWithNumberNoExistsException(activateCardDto.getCardNumber()));
         card.setStatus(CardStatus.ACTIVE);
         cardRepository.save(card);
+
+        String response = "Card activated successfully";
+        idempotencyService.saveIdempotencyKey(idempotencyKey, response, TIME_LIFE_RECORD_DB);
+        return response;
     }
 
     @Transactional
-    public void deleteCard(DeleteCardRequest deleteCardDto) {
+    public String deleteCard(DeleteCardRequest deleteCardDto, String idempotencyKey) {
         Card card = cardRepository.findByCardNumber(deleteCardDto.getCardNumber())
                 .orElseThrow(()-> new CardWithNumberNoExistsException(deleteCardDto.getCardNumber()));
 
         cardRepository.deleteById(card.getId());
+        String response = "Card deleted";
+        idempotencyService.saveIdempotencyKey(idempotencyKey, response, TIME_LIFE_RECORD_DB);
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -101,8 +118,12 @@ public class AdminCardFunction {
     }
 
     @Transactional
-    public void setCardLimit(SetLimitsForCardRequest limitDto) {
+    public String setCardLimit(SetLimitsForCardRequest limitDto, String idempotencyKey) {
+
         limitService.setCardLimit(limitDto);
+        String resultStringResponse = "The limit has been set";
+        idempotencyService.saveIdempotencyKey(idempotencyKey, resultStringResponse, TIME_LIFE_RECORD_DB);
+        return resultStringResponse;
     }
 
 }

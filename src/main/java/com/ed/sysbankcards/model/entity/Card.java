@@ -3,6 +3,7 @@ package com.ed.sysbankcards.model.entity;
 import com.ed.sysbankcards.model.entity.operations.Transaction;
 import com.ed.sysbankcards.model.enums.CardStatus;
 import com.ed.sysbankcards.model.enums.converter.CardStatusConverter;
+import com.ed.sysbankcards.util.CardNumberEncryptor;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,7 +14,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-@Table(name = "")
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,6 +28,7 @@ public class Card extends BaseEntity {
     private Long id;
 
     @Column(name = "card_number")
+    @Convert(converter = CardNumberEncryptor.class)
     private String cardNumber;
 
     @ManyToOne
@@ -50,6 +51,6 @@ public class Card extends BaseEntity {
     @OneToMany(mappedBy = "sourceCard", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Transaction> history;
 
-    @OneToOne
+    @OneToOne(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
     private Limit limit;
 }

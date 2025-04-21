@@ -19,7 +19,7 @@ public interface CardRepository extends JpaRepository<Card, Long> {
 
     Optional<Card> findByCardNumber(String cardNumber);
 
-    List<Card> findByCustomerId(Long customerId, Pageable pageable);
+    Page<Card> findByCustomerId(Long customerId, Pageable pageable);
 
     Page<Card> findByCustomerIdAndStatus(Long customerId, CardStatus status, Pageable pageable);
 

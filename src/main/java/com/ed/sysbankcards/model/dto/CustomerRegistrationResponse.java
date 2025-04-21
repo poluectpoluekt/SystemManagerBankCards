@@ -8,4 +8,8 @@ import lombok.Setter;
 @Setter
 @Getter
 public class CustomerRegistrationResponse {
+
+    private String name;
+
+    private String email;
 }

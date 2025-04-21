@@ -13,19 +13,13 @@
             <column name="id" type="BIGINT">
                 <constraints primaryKey="true"/>
             </column>
-            <column name="name" type="VARCHAR(255)">
+            <column name="name" type="VARCHAR(10)">
                 <constraints nullable="false"/>
             </column>
-            <column name="email" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-
-            <column name="password" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-
-            <column name="created_at" type="DATE"/>
         </createTable>
+
+        <addForeignKeyConstraint baseTableName="customer_role" baseColumnNames="role_id" constraintName="fk_role_id" referencedTableName="role"
+                                 referencedColumnNames="id"/>
 
     </changeSet>
 </databaseChangeLog>

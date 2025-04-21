@@ -20,6 +20,7 @@ import com.ed.sysbankcards.repository.CardRepository;
 import com.ed.sysbankcards.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -41,29 +42,40 @@ public class CustomerCardFunctionService {
     private final TransactionRepository transactionRepository;
     private final CardMapper cardMapper;
     private final TransactionMapper transactionMapper;
+    private final IdempotencyService idempotencyService;
+    private final long TIME_LIFE_RECORD_DB = 3600;
 
 
     @Transactional(readOnly = true)
-    public List<CardResponse> getCustomerCards(Long customerId, CardStatus status, int page, int size) {
+    public Page<CardResponse> getCustomerCards(Long customerId, CardStatus status, int page, int size, String idemKey) {
+
         if(customerService.findCustomerById(customerId).isEmpty()){
             throw new CustomerNotFoundException(customerId);
         }
-        Pageable pageable = PageRequest.of(page,size, Sort.by("timestamp"));
+        Pageable pageable = PageRequest.of(page,size, Sort.by(Sort.Direction.ASC,"createdAt"));
         if(status != null){
-            return cardRepository.findByCustomerIdAndStatus(customerId, status, pageable).getContent()
-                    .stream().map(cardMapper::toCardResponse).toList();
+            return cardRepository.findByCustomerIdAndStatus(customerId, status, pageable)
+                    .map(cardMapper::toCardResponse);
         }
-        return cardRepository.findByCustomerId(customerId, pageable).stream().map(cardMapper::toCardResponse).toList();
+
+        Page<CardResponse> responses = cardRepository.findByCustomerId(customerId, pageable).map(cardMapper::toCardResponse);
+        idempotencyService.saveIdempotencyKey(idemKey, responses, TIME_LIFE_RECORD_DB);
+        return responses;
     }
 
     @Transactional(readOnly = true)
-    public CardResponse getCustomerCard(String cartNumber) {
-        return cardMapper.toCardResponse(cardRepository.findByCardNumber(cartNumber)
+    public CardResponse getCustomerCard(String cartNumber, String idempotencyKey) {
+
+
+        CardResponse response = cardMapper.toCardResponse(cardRepository.findByCardNumber(cartNumber)
                 .orElseThrow(()-> new CardWithNumberNoExistsException(cartNumber)));
+
+        idempotencyService.saveIdempotencyKey(idempotencyKey, response, TIME_LIFE_RECORD_DB);
+        return response;
     }
 
     @Transactional
-    public void requestCardBlock(BlockCardRequest blockCardDto) {
+    public String requestCardBlock(BlockCardRequest blockCardDto, String idempotencyKey) {
         Card card = cardRepository.findByCardNumber(blockCardDto.getCardNumber())
                 .orElseThrow(()-> new CardWithNumberNoExistsException(blockCardDto.getCardNumber()));
 
@@ -73,22 +85,31 @@ public class CustomerCardFunctionService {
 
         card.setStatus(CardStatus.BLOCKED);
         cardRepository.save(card);
+
+        String stringResultResponse = "Card has been blocked";
+        idempotencyService.saveIdempotencyKey(idempotencyKey, stringResultResponse, TIME_LIFE_RECORD_DB);
+        return stringResultResponse;
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionResponse> getTransactionalByCard(ShowTransactionalByCardRequest Dto, int page, int size) {
+    public List<TransactionResponse> getTransactionalByCard(ShowTransactionalByCardRequest Dto,
+                                                            int page, int size, String idempotencyKey) {
         Card card = cardRepository.findByCardNumber(Dto.getCardNumber())
                 .orElseThrow(()-> new CardWithNumberNoExistsException(Dto.getCardNumber()));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp"));
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt"));
 
-        return transactionRepository.findBySourceCard(card,pageable)
+        List<TransactionResponse> responses = transactionRepository.findBySourceCard(card, pageable)
                 .stream().map(transactionMapper::toTransactionResponse).toList();
+
+        idempotencyService.saveIdempotencyKey(idempotencyKey, responses, TIME_LIFE_RECORD_DB);
+        return responses;
     }
 
 
     @Transactional
-    public TransactionResponse transferBetweenCards(TransferFundsBetweenUserCardsRequest transferFundsDto) {
+    public TransactionResponse transferBetweenCards(TransferFundsBetweenUserCardsRequest transferFundsDto,
+                                                    String idempotencyKey) {
 
         Card cardFrom = cardRepository.findByCardNumberWithLock(transferFundsDto.getFromCardNumber())
                 .orElseThrow(()-> new CardWithNumberNoExistsException(transferFundsDto.getFromCardNumber()));
@@ -119,12 +140,15 @@ public class CustomerCardFunctionService {
 
         cardRepository.save(cardFrom);
         cardRepository.save(cardTo);
-        return transactionMapper.toTransactionResponse(transactionRepository.save(transferTransaction));
+        TransactionResponse response = transactionMapper.toTransactionResponse(transactionRepository.save(transferTransaction));
+
+        idempotencyService.saveIdempotencyKey(idempotencyKey, response, TIME_LIFE_RECORD_DB);
+        return response;
 
     }
 
     @Transactional
-    public TransactionResponse withdrawalFromCard(WithdrawFundsRequest withdrawDto){
+    public TransactionResponse withdrawalFromCard(WithdrawFundsRequest withdrawDto, String idempotencyKey){
         Card cardFrom = cardRepository.findByCardNumberWithLock(withdrawDto.getCardNumber())
                 .orElseThrow(()-> new CardWithNumberNoExistsException(withdrawDto.getCardNumber()));
 
@@ -150,8 +174,35 @@ public class CustomerCardFunctionService {
         withdrawTransaction.setTransactionStatus(TransactionStatus.SUCCESS);
 
         cardRepository.save(cardFrom);
-        return transactionMapper.toTransactionResponse(transactionRepository.save(withdrawTransaction));
 
+        TransactionResponse response = transactionMapper.toTransactionResponse(transactionRepository.save(withdrawTransaction));
+        idempotencyService.saveIdempotencyKey(idempotencyKey, response, TIME_LIFE_RECORD_DB);
+
+        return response;
+
+    }
+
+    @Transactional
+    public TransactionResponse cardReplenishment(ReplenishmentCardRequest replenishmentCardDto, String idempotencyKey) {
+        Card card = cardRepository.findByCardNumberWithLock(replenishmentCardDto.getCardNumber())
+                .orElseThrow(()-> new CardWithNumberNoExistsException(replenishmentCardDto.getCardNumber()));
+
+
+        card.setBalance(card.getBalance().add(replenishmentCardDto.getAmount()));
+
+        Transaction replenishTransaction = new Transaction();
+        replenishTransaction.setSourceCard(card);
+        replenishTransaction.setAmount(replenishmentCardDto.getAmount());
+        replenishTransaction.setTransactionType(TransactionType.CREDIT);
+        replenishTransaction.setTransactionStatus(TransactionStatus.SUCCESS);
+        replenishTransaction.setCurrency("RUB");
+        transactionRepository.save(replenishTransaction);
+
+        cardRepository.save(card);
+
+        TransactionResponse transactionResponse = transactionMapper.toTransactionResponse(replenishTransaction);
+        idempotencyService.saveIdempotencyKey(idempotencyKey, transactionResponse, TIME_LIFE_RECORD_DB);
+        return transactionResponse;
     }
 
     private void checkLimits(Card card, BigDecimal amount) {

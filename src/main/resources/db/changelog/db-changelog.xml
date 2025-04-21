@@ -10,4 +10,6 @@
     <include file="changes/003_TRANSACTION.xml" relativeToChangelogFile="true"/>
     <include file="changes/004_CARD.xml" relativeToChangelogFile="true"/>
     <include file="changes/005_LIMIT.xml" relativeToChangelogFile="true"/>
+    <include file="changes/006_ADD_ROLE_ADMIN_AND_USER.xml" relativeToChangelogFile="true"/>
+    <include file="changes/007_ADD_ADMIN.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
