@@ -11,7 +11,7 @@
             <column name="id" value="1" />
             <column name="name" value="admin"/>
             <column name="email" value="admin@syscard.com"/>
-            <column name="password" value="1qaz2ws"/>
+            <column name="password" value="$argon2id$v=19$m=60000,t=10,p=1$vmLAY10qJ9e+B+qhAZo+nw$ZC9Scn4WGRGXS4+YeepnjT7+CLVlT2H0YA47/rl6QZs"/>
             <column name="is_account_non_expired" value="true"/>
             <column name="is_account_non_locked" value="true"/>
             <column name="is_credentials_non_expired" value="true"/>

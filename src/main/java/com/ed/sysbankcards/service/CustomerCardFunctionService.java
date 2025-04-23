@@ -18,6 +18,7 @@ import com.ed.sysbankcards.model.enums.TransactionStatus;
 import com.ed.sysbankcards.model.enums.TransactionType;
 import com.ed.sysbankcards.repository.CardRepository;
 import com.ed.sysbankcards.repository.TransactionRepository;
+import com.ed.sysbankcards.util.CardNumberEncryptorUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -184,6 +185,7 @@ public class CustomerCardFunctionService {
 
     @Transactional
     public TransactionResponse cardReplenishment(ReplenishmentCardRequest replenishmentCardDto, String idempotencyKey) {
+
         Card card = cardRepository.findByCardNumberWithLock(replenishmentCardDto.getCardNumber())
                 .orElseThrow(()-> new CardWithNumberNoExistsException(replenishmentCardDto.getCardNumber()));
 
@@ -196,11 +198,11 @@ public class CustomerCardFunctionService {
         replenishTransaction.setTransactionType(TransactionType.CREDIT);
         replenishTransaction.setTransactionStatus(TransactionStatus.SUCCESS);
         replenishTransaction.setCurrency("RUB");
-        transactionRepository.save(replenishTransaction);
+        TransactionResponse transactionResponse = transactionMapper
+                .toTransactionResponse(transactionRepository.save(replenishTransaction));
 
         cardRepository.save(card);
 
-        TransactionResponse transactionResponse = transactionMapper.toTransactionResponse(replenishTransaction);
         idempotencyService.saveIdempotencyKey(idempotencyKey, transactionResponse, TIME_LIFE_RECORD_DB);
         return transactionResponse;
     }

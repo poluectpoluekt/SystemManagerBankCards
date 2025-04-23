@@ -13,6 +13,7 @@ import com.ed.sysbankcards.model.enums.CardStatus;
 import com.ed.sysbankcards.repository.CardRepository;
 import com.ed.sysbankcards.repository.LimitRepository;
 import com.ed.sysbankcards.repository.TransactionRepository;
+import com.ed.sysbankcards.util.CardNumberEncryptorUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
@@ -36,14 +37,20 @@ public class AdminCardFunction {
     private final LimitService limitService;
     private final IdempotencyService idempotencyService;
     private final long TIME_LIFE_RECORD_DB = 3600;
+    private final CardNumberEncryptorUtil cardEncryptorUtil;
 
     @Transactional
     public CardResponse createCard(CreateCardRequest createCardDto, String idempotencyKey) {
 
         Card card = new Card();
+//        if(cardRepository.findByCardNumber(cardEncryptorUtil.encryptCardNumber(createCardDto.getCardNumber())).isPresent()) {
+//            throw new CardWithNumberAlreadyExistsException(createCardDto.getCardNumber());
+//        }
+
         if(cardRepository.findByCardNumber(createCardDto.getCardNumber()).isPresent()) {
             throw new CardWithNumberAlreadyExistsException(createCardDto.getCardNumber());
         }
+
         card.setCardNumber(createCardDto.getCardNumber());
 
         card.setCustomer(customerService.findCustomerById(createCardDto

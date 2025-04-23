@@ -3,7 +3,7 @@ package com.ed.sysbankcards.model.entity;
 import com.ed.sysbankcards.model.entity.operations.Transaction;
 import com.ed.sysbankcards.model.enums.CardStatus;
 import com.ed.sysbankcards.model.enums.converter.CardStatusConverter;
-import com.ed.sysbankcards.util.CardNumberEncryptor;
+import com.ed.sysbankcards.util.CardNumberEncryptorConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -28,7 +28,7 @@ public class Card extends BaseEntity {
     private Long id;
 
     @Column(name = "card_number")
-    @Convert(converter = CardNumberEncryptor.class)
+    @Convert(converter = CardNumberEncryptorConverter.class)
     private String cardNumber;
 
     @ManyToOne

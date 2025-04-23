@@ -1,10 +1,6 @@
 package com.ed.sysbankcards.util;
 
-import com.ed.sysbankcards.exception.customer.CustomerNotFoundException;
 import com.ed.sysbankcards.model.application_class.CustomerDetails;
-import com.ed.sysbankcards.model.dto.AuthRequest;
-import com.ed.sysbankcards.model.entity.Customer;
-import com.ed.sysbankcards.repository.CustomerRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -28,8 +24,6 @@ public class JwtUtil {
 
     @Value("${app.security}")
     private String secretKey;
-
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60;
 
     public String generateToken(CustomerDetails customerDetails) {
 

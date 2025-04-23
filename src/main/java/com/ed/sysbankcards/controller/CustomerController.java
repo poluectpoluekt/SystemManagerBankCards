@@ -33,7 +33,7 @@ public class CustomerController {
     @Operation(summary = "Зарегистрировать нового пользователя", description = "В ответе возвращается dto.")
     @Tag(name = "sign up", description = "Customer")
     @PostMapping("/registration")
-    public CustomerRegistrationResponse customerRegistration(@RequestBody CustomerRegistrationRequest customerReqDto,
+    public CustomerRegistrationResponse customerRegistration(@Valid @RequestBody CustomerRegistrationRequest customerReqDto,
                                                              @RequestHeader("Idempotency-Key") @NotBlank String idempotencyKey){
         if (idempotencyService.idempotencyKeyCheck(idempotencyKey)) {
             return (CustomerRegistrationResponse) idempotencyService.getResultByIdempotencyKey(idempotencyKey);

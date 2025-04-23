@@ -2,6 +2,8 @@ package com.ed.sysbankcards.advice;
 
 import com.ed.sysbankcards.advice.response.RuntimeExceptionResponse;
 import com.ed.sysbankcards.exception.card.*;
+import com.ed.sysbankcards.exception.card.encryptor.DecryptException;
+import com.ed.sysbankcards.exception.card.encryptor.EncryptorException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -45,6 +47,18 @@ public class CardExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(LimitExhaustedException.class)
     private RuntimeExceptionResponse limitExhausted(LimitExhaustedException e){
+        return new RuntimeExceptionResponse(e.getMessage(), LocalDateTime.now());
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(EncryptorException.class)
+    private RuntimeExceptionResponse cardEncrypted(EncryptorException e){
+        return new RuntimeExceptionResponse(e.getMessage(), LocalDateTime.now());
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(DecryptException.class)
+    private RuntimeExceptionResponse cardDecrypted(DecryptException e){
         return new RuntimeExceptionResponse(e.getMessage(), LocalDateTime.now());
     }
 }
